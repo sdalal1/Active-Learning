@@ -50,7 +50,7 @@ plt.legend(loc='upper right')
 plt.title('Problem 1')
 plt.show()
 
-#######2#######
+# #######2#######
 
 X_s, Y_s = np.meshgrid(x, y)
 Z_inv = np.ones_like(X_s)
@@ -78,8 +78,12 @@ for gr in range(3):
   Z_3  = np.ones([100,100])
   x_3,y_3 = np.random.uniform(0,1,size=2)
   for i in range(len(x_i)):
+    u = np.random.uniform(0,1)
+    if u > likelihood([x_3, y_3], source_location):
       likelihood_point = likelihood([x_3, y_3] , [X,Y])
-      Z_3 *= likelihood_point
+    else:
+      likelihood_point = 1.0 - likelihood([x_3, y_3] , [X,Y])
+    Z_3 *= likelihood_point
 
   plt.contourf(X, Y, Z_3, cmap='gray')
   plt.scatter(x_3, y_3, color='red', alpha=0.3, label='Negative Likelihood')
@@ -104,12 +108,13 @@ y_i4 = []
 z_i4 = []
 bg_4 = []
 
-x_1, y_1, u = np.random.uniform(0, 1, size=3)
+x_1, y_1 = np.random.uniform(0, 1, size=2)
 for i in range(10):
-  
+  u = np.random.uniform(0, 1)
   if u < likelihood([x_1, y_1], source_location):
       x_g4.append(x_1)
       y_g4.append(y_1)
+      print("here")
       zii = 1.0
   else:
       x_r4.append(x_1)
@@ -129,13 +134,15 @@ for i in range(10):
   b_bar = likelihood_point / np.sum(likelihood_point)
   bg_4.append(b_bar)
 
-fig, axes = plt.subplots(5, 2, figsize=(6, 15))
+fig, axes = plt.subplots(2, 5, figsize=(15, 6))
 for i, ax in enumerate(axes.flat):
   ax.contourf(X, Y, bg_4[i], cmap='gray')
   ax.scatter(x_i4[:i+1], y_i4[:i+1], color='brown', alpha=0.3, label='Measurements')
+  #ax.scatter(x_r4[:i+1], y_r4[:i+1], color='red', alpha=0.3, label='Negative Likelihood')
+  #ax.scatter(x_g4[:i+1], y_g4[:i+1], color='green', alpha=0.3, label='Positive Likelihood')
   ax.scatter(source_location[0], source_location[1], color='brown', marker='x', label='Source Location')
   ax.set_title(f'Measurement {i+1}')
-plt.title('Problem 4')
+# plt.title('Problem 4')
 plt.show()
 
 
@@ -177,13 +184,13 @@ for i in range(10):
   b_bar = likelihood_point / np.sum(likelihood_point)
   bg_5.append(b_bar)
 
-fig, axes = plt.subplots(5, 2, figsize=(6, 15))
+fig, axes = plt.subplots(2, 5, figsize=(15, 6))
 for i, ax in enumerate(axes.flat):
   ax.contourf(X, Y, bg_5[i], cmap='gray')
   ax.scatter(x_i5[:i+1], y_i5[:i+1], color='brown', alpha=0.3, label='Measurements')
   ax.scatter(source_location[0], source_location[1], color='brown', marker='x', label='Source Location')
   ax.set_title(f'Measurement {i+1}')
-plt.title('Problem 5')
+# plt.title('Problem 5')
 plt.show()
   
 
