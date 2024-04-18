@@ -13,6 +13,7 @@
 
 ### Question-4
 ![Q4](assets/Problem_4.png)
+![Q4](assets/Problem_4_2.png)
 
 ### Question-5
 ![Q5](assets/Problem_5.png)
