@@ -1,5 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import multivariate_normal
+
+
+# # scipy.stats.multivariate_normal
 
 # def motion_model(state, u , dt):
     
@@ -82,8 +86,9 @@ import matplotlib.pyplot as plt
 
 # state_array = np.array(state_array)
 # ground_truth_array = np.array(ground_truth_array)
-# plt.plot(ground_truth_array[:, 0], ground_truth_array[:, 1], color = 'black')
-# plt.plot(state_array[:, 0], state_array[:, 1], color = 'red')
+# plt.plot(ground_truth_array[:, 0], ground_truth_array[:, 1], color = 'black', label = 'Ground Truth')
+# plt.plot(state_array[:, 0], state_array[:, 1], color = 'red', label = 'State Estimate')
+# plt.legend()
 # plt.show()
 
 
@@ -99,9 +104,9 @@ w = np.array([w1, w2, w3])
 
 
 
-u1 = np.array([0.35, 0.38]).T
-u2 = np.array([0.68, 0.25]).T
-u3 = np.array([0.56, 0.64]).T
+u1 = np.array([0.35, 0.38])
+u2 = np.array([0.68, 0.25])
+u3 = np.array([0.56, 0.64])
 
 u = np.array([u1, u2, u3])
 
@@ -113,139 +118,150 @@ sigma3 = np.array([[0.008, 0.0], [0.0, 0.004]])
 sigma = np.array([sigma1, sigma2, sigma3])
 
 
+def generate_samples(weights, means, covs, num_samples):
+    samples = np.zeros(shape=(num_samples, 3))
 
+    indeces = np.arange(0, len(weights))
 
-# plt.scatter(x[0, :, 0], x[0, :, 1], color = 'red')
-# plt.scatter(x[1, :, 0], x[1, :, 1], color = 'blue')
-# plt.scatter(x[2, :, 0], x[2, :, 1], color = 'green')
+    for i in range(num_samples):
+        index = np.random.choice(a=indeces, p=weights, size=1)[0]
 
+        mean = means[index, :]
+        cov = covs[index, :, :]
+
+        s = np.random.multivariate_normal(mean=mean, cov=cov)
+        samples[i, :2] = s
+        samples[i, 2] = index
+
+    return samples
+
+def point_in_gaussian(samples,gamma, mean, cov, weight, ground_truth):
+    first_gaussian = []
+    second_gaussian = []
+    third_gaussian = []
+    
+    for i in range(len(samples)):
+        # print(samples[i])
+        # print(gamma[i])
+        if gamma[i, 0] > gamma[i, 1] and gamma[i, 0] > gamma[i, 2]:
+            first_gaussian.append(samples[i])
+        elif gamma[i, 1] > gamma[i, 0] and gamma[i, 1] > gamma[i, 2]:
+            second_gaussian.append(samples[i])
+        else:   
+            third_gaussian.append(samples[i])
+    
+    first_gaussian = np.array(first_gaussian)
+    second_gaussian = np.array(second_gaussian)
+    third_gaussian = np.array(third_gaussian)
+    
+    print("second",second_gaussian.shape)
+    print("third",third_gaussian.shape)
+    print("first",first_gaussian.shape)
+
+    Z_tot = np.zeros((100, 100))
+    for i in range(3):
+        x = np.linspace(0, 1.0, 100)
+        y = np.linspace(0, 1.0, 100)
+        X, Y = np.meshgrid(x, y)
+        for j in range(X.shape[0]):
+            for k in range(X.shape[1]):
+                # pos = np.array([X[j,k], Y[j,k]])
+                Z = weight[i] * np.exp(-0.5 * np.dot(np.dot(np.array([X[j,k], Y[j,k]]) - mean[i], np.linalg.inv(cov[i])), np.array([X[j,k], Y[j,k]]) - mean[i]))
+                Z_tot[j,k] += Z
+
+    Z_groud_truth = np.zeros((100, 100))
+    for i in range(3):
+        x = np.linspace(0, 1.0, 100)
+        y = np.linspace(0, 1.0, 100)
+        X, Y = np.meshgrid(x, y)
+        for j in range(X.shape[0]):
+            for k in range(X.shape[1]):
+                # pos = np.array([X[j,k], Y[j,k]])
+                Z = multivariate_normal.pdf([X[j,k], Y[j,k]], mean=u[i], cov=sigma[i])
+                Z_groud_truth[j,k] += Z
+    
+    colors = ['red', 'blue', 'green']
+    fig, ax = plt.subplots(1,3, figsize=(15,5))
+    ax[0].set_xlim(0, 1)
+    ax[0].set_ylim(0, 1)
+    ax[1].set_xlim(0, 1)
+    ax[1].set_ylim(0, 1)
+    ax[2].set_xlim(0, 1)
+    ax[2].set_ylim(0, 1)
+    ax[2].title.set_text('Predicted')
+    ax[2].contourf(X, Y, Z_tot, 10, cmap='gray_r')
+    ax[2].scatter(first_gaussian[:, 0], first_gaussian[:, 1], color = colors[0])
+    ax[2].scatter(second_gaussian[:, 0], second_gaussian[:, 1], color = colors[1])
+    ax[2].scatter(third_gaussian[:, 0], third_gaussian[:, 1], color = colors[2])
+    for i in range(3):
+        w, v = np.linalg.eig(cov[i])
+        angle = np.arctan2(v[1,0], v[0,0])
+        ellipse = plt.matplotlib.patches.Ellipse(xy=mean[i], width=5*np.sqrt(w[0]), height=5*np.sqrt(w[1]), angle=angle*180/np.pi, edgecolor=colors[i], facecolor='none')
+        ax[2].add_patch(ellipse)
+    
+    ax[0].title.set_text('Samples')
+    ax[0].scatter(ground_truth[:, 0], ground_truth[:, 1], color = 'black')
+    ax[1].title.set_text('Ground Truth')
+    ax[1].contourf(X, Y, Z_groud_truth, 10, cmap='gray_r')
+    for i in range(3):
+        ax[1].scatter(ground_truth[ground_truth[:, 2] == i, 0], ground_truth[ground_truth[:, 2] == i, 1], color = colors[i])
+    # ax[1].scatter(ground_truth[:, 0], ground_truth[:, 1], c=ground_truth[:, 2])
+    for i in range(3):
+        w, v = np.linalg.eig(sigma[i])
+        angle = np.arctan2(v[1,0], v[0,0])
+        ellipse = plt.matplotlib.patches.Ellipse(xy=u[i], width=5*np.sqrt(w[0]), height=5*np.sqrt(w[1]), angle=angle*180/np.pi, edgecolor=colors[i], facecolor='none')
+        ax[1].add_patch(ellipse)
+    plt.show()
+    
+
+ground_truth = generate_samples(w, u, sigma, samples)
 gamma = np.zeros((samples, 3))
 
 a=0
 
+sample_mean = np.mean(ground_truth, axis=0)
+# sample_cov = np.cov(ground_truth[].T)
+# point_in_gaussian(ground_truth, gamma)
 
-while a < 6:
-    # x1 = np.random.multivariate_normal(u_list[0].T, sigma1[0], samples)
-    # x2 = np.random.multivariate_normal(u_list[1].T, sigma2[0], samples)
-    # x3 = np.random.multivariate_normal(u_list[2].T, sigma3[0], samples)
-
-    # x1 = np.random.multivariate_normal(u1, sigma1, samples)
-    # x2 = np.random.multivariate_normal(u2, sigma2, samples)
-    # x3 = np.random.multivariate_normal(u3, sigma3, samples)
-    print(u1)
-    x1 = np.random.multivariate_normal(u1, sigma1, samples)
-    x2 = np.random.multivariate_normal(u2, sigma2, samples)
-    x3 = np.random.multivariate_normal(u3, sigma3, samples)
-    
-    x = []
-    for i in range(samples):
-        x.append(np.array([x1[i], x2[i], x3[i]]))
-    
-    x = np.array(x)
-    print(x.shape)
-    
-    gamma = []
-    
+pred_weight = np.ones(3)/3
+pred_mean = np.array([[0.2, 0.2], [0.8, 0.2], [0.6, 0.8]])
+# pred_mean = np.array([sample_mean[0:2]+np.random.uniform(-0.1,0.1), sample_mean[0:2]+np.random.uniform(-0.1,0.1), sample_mean[0:2]+np.random.uniform(-0.1,0.1)])
+# pred_cov = np.array([np.eye(2)*0.01, np.eye(2)*0.01, np.eye(2)*0.01])
+pred_cov = np.array([[[0.01, 0.004], [0.004, 0.01]], [[0.005, -0.003], [-0.003, 0.005]], [[0.008, 0.0], [0.0, 0.004]]])
+pred_cov += np.random.uniform(low=-0.001, high=0.001, size=pred_cov.shape)
+while a < 5:
+    gamma = np.zeros((samples, 3))
     # convergence criteria
-    
-
     for i in range(samples):
-        den = w1 * x1[i] + w2 * x2[i] + w3 * x3[i]
-        gamma.append(np.array([w1 * x1[i]/den, w2 * x2[i]/den, w3 * x3[i]/den]))
+        for j in range(3):
+
+            gamma[i, j] = pred_weight[j] * multivariate_normal.pdf(ground_truth[i, 0:2], mean=pred_mean[j], cov=pred_cov[j])
+
+        gamma[i] /= np.sum(gamma[i])
     
     gamma = np.array(gamma)
-        
+    # print(gamma.shape)
+    point_in_gaussian(ground_truth, gamma, pred_mean, pred_cov, pred_weight, ground_truth)
+
     for k in range(3):
-        gamma_sum = 0
-        gamma_x_sum = np.zeros_like(u[k])
-        gamma_x_xT_sum = np.zeros_like(sigma[k])
-
-        for i in range(samples):
-            gamma_sum += gamma[i, k]
-            gamma_x_sum += gamma[i, k] * x[i, k]
-            gamma_x_xT_sum += gamma[i, k] * np.outer((x[i, k] - u[k]), (x[i, k] - u[k]))
-
-        if k == 0:
-            w1 = gamma_sum / samples
-            u1 = gamma_x_sum / gamma_sum
-            sigma1 = gamma_x_xT_sum / gamma_sum
-        elif k == 1:
-            w2 = gamma_sum / samples
-            u2 = gamma_x_sum / gamma_sum
-            sigma2 = gamma_x_xT_sum / gamma_sum
-        else:
-            w3 = gamma_sum / samples
-            u3 = gamma_x_sum / gamma_sum
-            sigma3 = gamma_x_xT_sum / gamma_sum
         
-    # for k in range(3):
-    #     # w[k] = np.sum(gamma[:, k])/samples
-    #     # u[k] = np.sum(gamma[:, k] * x[k])/np.sum(gamma[:, k])
-    #     # sigma[k] = np.sum(gamma[:, k] * (x[k] - u[k]) * (x[k] - u[k]))/np.sum(gamma[:, k])
-    #     gamma_sum = 0
-    #     gamma_x_sum = 0
-    #     gamma_x_xT_sum = 0
-    #     print("gamma_shape", gamma[i].shape)
-    #     print("x_shape", x[i, k].shape)
-    #     print("u_shape", u[k].shape)
-
-    #     for i in range(samples):
-    #         gamma_sum += gamma[i,k]
-    #         gamma_x_sum += gamma[i,k] * x[i]
-    #         gamma_x_xT_sum += gamma[i,k] * (x[i, k] - u[k]) * (x[i, k] - u[k]).T
-    
+        pred_weight[k] = np.sum(gamma[:, k]) / samples
+        pred_weight[k] /= np.sum(pred_weight)
+        print(k,pred_weight)
         
-    #     if k == 0:
-    #         w1 = gamma_sum/samples
-    #         u1 = gamma_x_sum/gamma_sum
-    #         sigma1 = gamma_x_xT_sum/gamma_sum
-    #     elif k == 1:
-    #         w2 = gamma_sum/samples
-    #         u2 = gamma_x_sum/gamma_sum
-    #         sigma2 = gamma_x_xT_sum/gamma_sum
-    #     else:
-    #         w3 = gamma_sum/samples
-    #         u3 = gamma_x_sum/gamma_sum
-    #         sigma3 = gamma_x_xT_sum/gamma_sum
-        # if k == 0:
-        #     w1 = np.sum(gamma[:, k])/samples
-        #     u1 = np.sum(np.sum(gamma[:, k] * x[k], axis=0))/np.sum(gamma[:, k])
-        #     sigma1 = np.sum(gamma[:, k] * (x[k] - u[k]) * (x[k] - u[k]))/np.sum(gamma[:, k])
-        # elif k == 1:
-        #     w2 = np.sum(gamma[:, k])/samples
-        #     u2 = np.sum(gamma[:, k] * x[k])/np.sum(gamma[:, k])
-        #     sigma2 = np.sum(gamma[:, k] * (x[k] - u[k]) * (x[k] - u[k]))/np.sum(gamma[:, k])
-        # else:
-        #     w3 = np.sum(gamma[:, k])/samples
-        #     u3 = np.sum(gamma[:, k] * x[k])/np.sum(gamma[:, k])
-        #     sigma3 = np.sum(gamma[:, k] * (x[k] - u[k]) * (x[k] - u[k]))/np.sum(gamma[:, k])
+        pred_mean[k] = np.sum(ground_truth[:, 0:2] * gamma[:,k][:, np.newaxis], axis=0) / np.sum(gamma[:, k])
         
+        print(k,pred_mean)
+        
+        pred_cov[k] = np.zeros_like(pred_cov[k])
 
-    # while sigma_list[0][-1] < 0.0001 and sigma_list[1][-1] < 0.0001 and sigma_list[2][-1] < 0.0001:
-    #     for i in range(samples):
-    #         den = w1 * x1[i] + w2 * x2[i] + w3 * x3[i]
-    #         gamma[i] = np.array([w1 * x1[i]/den, w2 * x2[i]/den, w3 * x3[i]/den])
-            
-    #     for k in range(3):
-    #         w[k] = np.sum(gamma[:, k])/samples
-    #         u[k] = np.sum(gamma[:, k] * x[k])/np.sum(gamma[:, k])
-    #         sigma[k] = np.sum(gamma[:, k] * (x[k] - u[k]) * (x[k] - u[k]).T)/np.sum(gamma[:, k])
-
-    #         w_list[k] = np.append(w_list[k], w[k])
-    #         u_list[k] = np.append(u_list[k], u[k])
-    #         sigma[k] = np.append(sigma[k], sigma[k])
-            
+        pred_cov[k] = np.dot((ground_truth[:, 0:2] - pred_mean[k]).T, (ground_truth[:, 0:2] - pred_mean[k]) * gamma[:, k][:, np.newaxis]) / np.sum(gamma[:, k])
+        
+        print(k,pred_cov)
+  
     a += 1
 
-
-    # plt.scatter(x[0, :, 0], x[0, :, 1], color = 'red')
-    # plt.scatter(x[1, :, 0], x[1, :, 1], color = 'blue')
-    # plt.scatter(x[2, :, 0], x[2, :, 1], color = 'green')
-    for i in range(samples):
-        plt.scatter(x[i, 0, 0], x[i, 0, 1], color='red')  # x1
-        plt.scatter(x[i, 1, 0], x[i, 1, 1], color='blue')  # x2
-        plt.scatter(x[i, 2, 0], x[i, 2, 1], color='green')  # x3
-
-    plt.show()  
+    # plt.show()
+    
 
   

@@ -110,11 +110,11 @@ import matplotlib.pyplot as plt
 
 
 plt_desity = []
-fig, ax = fig, ax = plt.subplots(1, 1, figsize=(4,4), dpi=120, tight_layout=True)
-fig.suptitle('Rejection Sampling')
-ax.set_aspect('equal')
-ax.set_xlim(0.0, 1.0)
-ax.set_ylim(0.0, 1.0)
+fig, ax = plt.subplots(1, 2, figsize=(8,4), dpi=120, tight_layout=True)
+fig.suptitle('Rejection Sampling with Uniform Proposal Distribution')
+ax[1].set_aspect('equal')
+ax[1].set_xlim(0.0, 1.0)
+ax[1].set_ylim(0.0, 1.0)
 
 i = 0
 while i < num_samples:
@@ -126,9 +126,12 @@ while i < num_samples:
         plt_desity.append(sample)
         i += 1
     
-plt_desity /= np.max(plt_desity)     
+plt_desity /= np.max(plt_desity)
+
+# plot the real image
+ax[0].imshow(image_array, origin='lower', cmap='gray')
 for pt in plt_desity:
-    ax.plot(pt[0], pt[1], linestyle='', marker='o', markersize=2, color='k')
+    ax[1].plot(pt[0], pt[1], linestyle='', marker='o', markersize=2, color='k')
 
 plt.show()
 plt.close()
@@ -139,13 +142,29 @@ plt.close()
 import numpy as np
 import matplotlib.pyplot as plt
 
+def normal_pdf(x, mean, std_dev):
+    """
+    Calculate the probability density function (PDF) of a normal distribution.
+
+    Parameters:
+        x (float or numpy.ndarray): The value(s) at which to evaluate the PDF.
+        mean (float): The mean (μ) of the normal distribution.
+        std_dev (float): The standard deviation (σ) of the normal distribution.
+
+    Returns:
+        float or numpy.ndarray: The probability density at the given value(s) x.
+    """
+    exponent = -((x - mean) ** 2) / (2 * std_dev ** 2)
+    coefficient = 1 / (np.sqrt(2 * np.pi) * std_dev)
+    pdf = coefficient * np.exp(exponent)
+    return pdf
 
 plt_desity = []
-fig, ax = fig, ax = plt.subplots(1, 1, figsize=(4,4), dpi=120, tight_layout=True)
-fig.suptitle('Rejection Sampling')
-ax.set_aspect('equal')
-ax.set_xlim(0.0, 1.0)
-ax.set_ylim(0.0, 1.0)
+fig, ax = fig, ax = plt.subplots(1, 2, figsize=(9,4), dpi=120, tight_layout=True)
+fig.suptitle('Rejection Sampling with Gaussian Proposal Distribution')
+ax[1].set_aspect('equal')
+ax[1].set_xlim(0.0, 1.0)
+ax[1].set_ylim(0.0, 1.0)
 
 i = 0
 while i < num_samples:
@@ -156,10 +175,11 @@ while i < num_samples:
     if image_density(sample) >= rhs:
         plt_desity.append(sample)
         i += 1
-    
+
+ax[0].imshow(image_array, origin='lower', cmap='gray')
 plt_desity /= np.max(plt_desity)     
 for pt in plt_desity:
-    ax.plot(pt[0], pt[1], linestyle='', marker='o', markersize=2, color='k')
+    ax[1].plot(pt[0], pt[1], linestyle='', marker='o', markersize=2, color='k')
 
 plt.show()
 plt.close()
