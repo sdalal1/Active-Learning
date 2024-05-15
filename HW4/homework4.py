@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.integrate as spi
+import matplotlib.colors as mcolors
 
 ## Armijo Line Search
 
@@ -42,8 +43,11 @@ X, Y = np.meshgrid(X, Y)
 Z = f([X, Y])
 
 plt.figure()
-plt.plot(x_trajectory[:, 0], x_trajectory[:, 1], 'o-')
-plt.contourf(X, Y, Z, levels=20)
+plt.contourf(X, Y, Z, cmap='Blues_r', alpha=0.8, norm = mcolors.LogNorm())
+plt.plot(x_trajectory[:, 0], x_trajectory[:, 1], '-', color='purple')
+plt.scatter(x_trajectory[:, 0][0], x_trajectory[:, 1][0], c='r', alpha=1.)
+plt.scatter(x_trajectory[:, 0][-1], x_trajectory[:, 1][-1], c='r', alpha=1.)
+
 plt.xlabel('x1')
 plt.ylabel('x2')
 plt.title('Armijo Line Search')
